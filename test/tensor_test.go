@@ -255,3 +255,318 @@ func TestComputeBroadcastStrides(t *testing.T) {
 		})
 	}
 }
+
+// TestBroadcast tests the Broadcast function
+func TestBroadcast(t *testing.T) {
+	testCases := []struct {
+		name          string
+		inputShape    []int
+		inputData     []float64
+		targetShape   []int
+		expectedShape []int
+		expectedErr   bool
+	}{
+		{
+			name:          "BroadcastScalarTo1D",
+			inputShape:    []int{},
+			inputData:     []float64{5.0},
+			targetShape:   []int{3},
+			expectedShape: []int{3},
+			expectedErr:   false,
+		},
+		{
+			name:          "Broadcast1DTo2D",
+			inputShape:    []int{3},
+			inputData:     []float64{1.0, 2.0, 3.0},
+			targetShape:   []int{2, 3},
+			expectedShape: []int{2, 3},
+			expectedErr:   false,
+		},
+		{
+			name:          "InvalidTargetShapeWithNegativeDimension",
+			inputShape:    []int{2},
+			inputData:     []float64{1.0, 2.0},
+			targetShape:   []int{-1, 2},
+			expectedShape: nil,
+			expectedErr:   true,
+		},
+		{
+			name:          "EmptyTargetShape",
+			inputShape:    []int{2},
+			inputData:     []float64{1.0, 2.0},
+			targetShape:   []int{},
+			expectedShape: nil,
+			expectedErr:   true,
+		},
+		{
+			name:          "SameShapeBroadcast",
+			inputShape:    []int{2, 2},
+			inputData:     []float64{1.0, 2.0, 3.0, 4.0},
+			targetShape:   []int{2, 2},
+			expectedShape: []int{2, 2},
+			expectedErr:   false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create input tensor
+			inputTensor, err := tensor.NewTensor(tc.inputShape, tc.inputData)
+			if err != nil {
+				t.Fatalf("Failed to create input tensor: %v", err)
+			}
+
+			// Test broadcast
+			result, err := tensor.Broadcast(inputTensor, tc.targetShape)
+
+			// Check error cases
+			if tc.expectedErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			// Check shape
+			if !reflect.DeepEqual(result.Shape(), tc.expectedShape) {
+				t.Errorf("Expected shape %v, got %v", tc.expectedShape, result.Shape())
+			}
+
+			// Check data length matches shape size
+			expectedSize := 1
+			for _, dim := range tc.expectedShape {
+				expectedSize *= dim
+			}
+			if len(result.Data()) != expectedSize {
+				t.Errorf("Expected data length %d, got %d", expectedSize, len(result.Data()))
+			}
+		})
+	}
+}
+
+// TestArithmeticOps tests the arithmetic operations (Add, Sub, Mul, Div)
+func TestArithmeticOps(t *testing.T) {
+	testCases := []struct {
+		name           string
+		t1Shape        []int
+		t1Data         []float64
+		t2Shape        []int
+		t2Data         []float64
+		expectedShape  []int
+		expectedAdd    []float64
+		expectedSub    []float64
+		expectedMul    []float64
+		expectedDiv    []float64
+		expectAddErr   bool
+		expectSubErr   bool
+		expectMulErr   bool
+		expectDivErr   bool
+	}{
+		{
+			name:           "SameShapeScalars",
+			t1Shape:        []int{},
+			t1Data:         []float64{4.0},
+			t2Shape:        []int{},
+			t2Data:         []float64{2.0},
+			expectedShape:  []int{},
+			expectedAdd:    []float64{6.0},
+			expectedSub:    []float64{2.0},
+			expectedMul:    []float64{8.0},
+			expectedDiv:    []float64{2.0},
+			expectAddErr:   false,
+			expectSubErr:   false,
+			expectMulErr:   false,
+			expectDivErr:   false,
+		},
+		{
+			name:           "SameShape1D",
+			t1Shape:        []int{3},
+			t1Data:         []float64{1.0, 2.0, 3.0},
+			t2Shape:        []int{3},
+			t2Data:         []float64{4.0, 5.0, 6.0},
+			expectedShape:  []int{3},
+			expectedAdd:    []float64{5.0, 7.0, 9.0},
+			expectedSub:    []float64{-3.0, -3.0, -3.0},
+			expectedMul:    []float64{4.0, 10.0, 18.0},
+			expectedDiv:    []float64{0.25, 0.4, 0.5},
+			expectAddErr:   false,
+			expectSubErr:   false,
+			expectMulErr:   false,
+			expectDivErr:   false,
+		},
+		{
+			name:           "BroadcastScalarTo1D",
+			t1Shape:        []int{3},
+			t1Data:         []float64{2.0, 4.0, 6.0},
+			t2Shape:        []int{},
+			t2Data:         []float64{2.0},
+			expectedShape:  []int{3},
+			expectedAdd:    []float64{4.0, 6.0, 8.0},
+			expectedSub:    []float64{0.0, 2.0, 4.0},
+			expectedMul:    []float64{4.0, 8.0, 12.0},
+			expectedDiv:    []float64{1.0, 2.0, 3.0},
+			expectAddErr:   false,
+			expectSubErr:   false,
+			expectMulErr:   false,
+			expectDivErr:   false,
+		},
+		{
+			name:           "IncompatibleShapes",
+			t1Shape:        []int{2},
+			t1Data:         []float64{1.0, 2.0},
+			t2Shape:        []int{3},
+			t2Data:         []float64{1.0, 2.0, 3.0},
+			expectedShape:  nil,
+			expectedAdd:    nil,
+			expectedSub:    nil,
+			expectedMul:    nil,
+			expectedDiv:    nil,
+			expectAddErr:   true,
+			expectSubErr:   true,
+			expectMulErr:   true,
+			expectDivErr:   true,
+		},
+		{
+			name:           "DivisionByZero",
+			t1Shape:        []int{2},
+			t1Data:         []float64{1.0, 2.0},
+			t2Shape:        []int{2},
+			t2Data:         []float64{1.0, 0.0},
+			expectedShape:  []int{2},
+			expectedAdd:    []float64{2.0, 2.0},
+			expectedSub:    []float64{0.0, 2.0},
+			expectedMul:    []float64{1.0, 0.0},
+			expectedDiv:    nil,
+			expectAddErr:   false,
+			expectSubErr:   false,
+			expectMulErr:   false,
+			expectDivErr:   true,
+		},
+		{
+			name:           "Broadcast2DTo2D",
+			t1Shape:        []int{2, 2},
+			t1Data:         []float64{1.0, 2.0, 3.0, 4.0},
+			t2Shape:        []int{1, 2},
+			t2Data:         []float64{2.0, 3.0},
+			expectedShape:  []int{2, 2},
+			expectedAdd:    []float64{3.0, 5.0, 5.0, 7.0},
+			expectedSub:    []float64{-1.0, -1.0, 1.0, 1.0},
+			expectedMul:    []float64{2.0, 6.0, 6.0, 12.0},
+			expectedDiv:    []float64{0.5, 2.0/3.0, 1.5, 4.0/3.0},
+			expectAddErr:   false,
+			expectSubErr:   false,
+			expectMulErr:   false,
+			expectDivErr:   false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create tensors
+			t1, err := tensor.NewTensor(tc.t1Shape, tc.t1Data)
+			if err != nil {
+				t.Fatalf("Failed to create first tensor: %v", err)
+			}
+
+			t2, err := tensor.NewTensor(tc.t2Shape, tc.t2Data)
+			if err != nil {
+				t.Fatalf("Failed to create second tensor: %v", err)
+			}
+
+			// Test Add
+			resultAdd, err := t1.Add(t2)
+			if tc.expectAddErr {
+				if err == nil {
+					t.Error("Expected Add error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected Add error: %v", err)
+				} else {
+					if !reflect.DeepEqual(resultAdd.Shape(), tc.expectedShape) {
+						t.Errorf("Add: Expected shape %v, got %v", tc.expectedShape, resultAdd.Shape())
+					}
+					if !reflect.DeepEqual(resultAdd.Data(), tc.expectedAdd) {
+						t.Errorf("Add: Expected data %v, got %v", tc.expectedAdd, resultAdd.Data())
+					}
+				}
+			}
+
+			// Test Sub
+			resultSub, err := t1.Sub(t2)
+			if tc.expectSubErr {
+				if err == nil {
+					t.Error("Expected Sub error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected Sub error: %v", err)
+				} else {
+					if !reflect.DeepEqual(resultSub.Shape(), tc.expectedShape) {
+						t.Errorf("Sub: Expected shape %v, got %v", tc.expectedShape, resultSub.Shape())
+					}
+					if !reflect.DeepEqual(resultSub.Data(), tc.expectedSub) {
+						t.Errorf("Sub: Expected data %v, got %v", tc.expectedSub, resultSub.Data())
+					}
+				}
+			}
+
+			// Test Mul
+			resultMul, err := t1.Mul(t2)
+			if tc.expectMulErr {
+				if err == nil {
+					t.Error("Expected Mul error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected Mul error: %v", err)
+				} else {
+					if !reflect.DeepEqual(resultMul.Shape(), tc.expectedShape) {
+						t.Errorf("Mul: Expected shape %v, got %v", tc.expectedShape, resultMul.Shape())
+					}
+					if !reflect.DeepEqual(resultMul.Data(), tc.expectedMul) {
+						t.Errorf("Mul: Expected data %v, got %v", tc.expectedMul, resultMul.Data())
+					}
+				}
+			}
+
+			// Test Div
+			resultDiv, err := t1.Div(t2)
+			if tc.expectDivErr {
+				if err == nil {
+					t.Error("Expected Div error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected Div error: %v", err)
+				} else {
+					if !reflect.DeepEqual(resultDiv.Shape(), tc.expectedShape) {
+						t.Errorf("Div: Expected shape %v, got %v", tc.expectedShape, resultDiv.Shape())
+					}
+					if !almostEqual(resultDiv.Data(), tc.expectedDiv) {
+						t.Errorf("Div: Expected data %v, got %v", tc.expectedDiv, resultDiv.Data())
+					}
+				}
+			}
+		})
+	}
+}
+
+// almostEqual compares two float64 slices with a small epsilon for floating point comparison
+func almostEqual(a, b []float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	const epsilon = 1e-10
+	for i := range a {
+		if diff := a[i] - b[i]; diff > epsilon || diff < -epsilon {
+			return false
+		}
+	}
+	return true
+}
