@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	t1, err := tensor.NewTensor([]int{3, 3}, []float64{0})
+	t1, err := tensor.NewTensor([]int{3, 3}, []float64{1, 2, 3})
 	if err != nil {
 		panic(err)
 	}
