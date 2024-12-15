@@ -22,6 +22,31 @@ func ComputeStrides(shape []int) []int {
 	return strides
 }
 
+// ComputeBroadcastStrides computes the stride of a tensor given its shape, broadcast shape, and strides
+func ComputeBroadcastStrides(originalShape []int, alignedShape []int, originalStrides []int) []int {
+	// If either shape is empty, return the empty strides
+	if len(originalShape) == 0 || len(alignedShape) == 0 {
+		return []int{}
+	}
+
+	// Initialize the broadcast strides
+	broadcastStrides := make([]int, len(alignedShape))
+
+	// Calculate the broadcast strides
+	for i := range alignedShape {
+		if i < len(originalShape) && alignedShape[i] == originalShape[i] {
+			// Dimensions match, so use the original strides
+			broadcastStrides[i] = originalStrides[i]
+		} else {
+			// Dimension is broadcasted, so set the stride to 0
+			broadcastStrides[i] = 0
+		}
+	}
+
+	// Return the broadcast strides
+	return broadcastStrides
+}
+
 // AlignShapes aligns the shapes of two tensors
 func AlignShapes(shape1 []int, shape2 []int) ([]int, error) {
 	// Check if shape1 is valid

@@ -43,6 +43,64 @@ func NewTensor(shape []int, data []float64) (*TensorStruct, error) {
 		}, nil
 	}
 
+	// Calculate the expected data size
+	expectedLength := 1
+	for _, dim := range shape {
+		expectedLength *= dim
+	}
+
+	// Check if we have too much data
+	if len(data) > expectedLength {
+		return nil, fmt.Errorf("data length %d exceeds shape capacity %d", len(data), expectedLength)
+	}
+
+	// Check if we should broadcast
+	if len(data) < expectedLength {
+		var actualShape []int
+		if len(data) == 1 {
+			// Single value should be treated as a scalar
+			actualShape = []int{}
+		} else {
+			// Multiple values should be treated as a 1D tensor
+			actualShape = []int{len(data)}
+		}
+		desiredShape := shape
+
+		alignedShape, err := AlignShapes(actualShape, desiredShape)
+		if err != nil {
+			return nil, fmt.Errorf("cannot broadcast data of length %d to shape %v: %v", len(data), shape, err)
+		}
+
+		// For scalars, we need to use the desired shape directly
+		if len(actualShape) == 0 {
+			// Create broadcasted data
+			broadcastedData := make([]float64, expectedLength)
+			for i := range broadcastedData {
+				broadcastedData[i] = data[0]
+			}
+			
+			return &TensorStruct{
+				shape:  desiredShape,
+				stride: ComputeStrides(desiredShape),
+				data:   broadcastedData,
+			}, nil
+		}
+
+		broadcastStride := ComputeBroadcastStrides(actualShape, alignedShape, ComputeStrides(actualShape))
+
+		// Create broadcasted data
+		broadcastedData := make([]float64, expectedLength)
+		for i := range broadcastedData {
+			broadcastedData[i] = data[0]
+		}
+
+		return &TensorStruct{
+			shape:  alignedShape,
+			stride: broadcastStride,
+			data:   broadcastedData,
+		}, nil
+	}
+
 	// Compute the stride
 	stride := ComputeStrides(shape)
 

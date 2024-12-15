@@ -7,16 +7,12 @@ import (
 )
 
 func main() {
-	shape1 := []int{2}
-	shape2 := []int{4, 2}
-
-	fmt.Printf("shape1: %v\n", shape1)
-	fmt.Printf("shape2: %v\n", shape2)
-
-	alignedShape, err := tensor.AlignShapes(shape1, shape2)
+	t1, err := tensor.NewTensor([]int{3, 3}, []float64{0})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("alignedShape: %v\n", alignedShape)
+	fmt.Printf("Shape: %v\n", t1.Shape())
+	fmt.Printf("Stride: %v\n", t1.Stride())
+	fmt.Printf("Data: %v\n", t1.Data())
 }

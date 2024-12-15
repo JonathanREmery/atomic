@@ -7,6 +7,7 @@ import (
 	"github.com/JonathanREmery/atomic.git/pkg/tensor"
 )
 
+// TestNewTensor tests the NewTensor function
 func TestNewTensor(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -54,6 +55,114 @@ func TestNewTensor(t *testing.T) {
 	}
 }
 
+// TestNewTensorBroadcast tests the auto-broadcasting feature of NewTensor
+func TestNewTensorBroadcast(t *testing.T) {
+	testCases := []struct {
+		name           string
+		shape          []int
+		data           []float64
+		expectedShape  []int
+		expectedStride []int
+		expectedData   []float64
+		expectedErr    bool
+	}{
+		{
+			name:           "ScalarTo2D",
+			shape:          []int{2, 3},
+			data:           []float64{5},
+			expectedShape:  []int{2, 3},
+			expectedStride: []int{3, 1},
+			expectedData:   []float64{5, 5, 5, 5, 5, 5},
+			expectedErr:    false,
+		},
+		{
+			name:           "ScalarTo3D",
+			shape:          []int{2, 2, 2},
+			data:           []float64{3},
+			expectedShape:  []int{2, 2, 2},
+			expectedStride: []int{4, 2, 1},
+			expectedData:   []float64{3, 3, 3, 3, 3, 3, 3, 3},
+			expectedErr:    false,
+		},
+		{
+			name:           "VectorTo2D_Invalid",
+			shape:          []int{2, 3},
+			data:           []float64{1, 2},
+			expectedShape:  nil,
+			expectedStride: nil,
+			expectedData:   nil,
+			expectedErr:    true,
+		},
+		{
+			name:           "VectorTo2D_Valid",
+			shape:          []int{3, 1},
+			data:           []float64{1, 2, 3},
+			expectedShape:  []int{3, 1},
+			expectedStride: []int{1, 1},
+			expectedData:   []float64{1, 2, 3},
+			expectedErr:    false,
+		},
+		{
+			name:           "EmptyShape",
+			shape:          []int{},
+			data:           []float64{42},
+			expectedShape:  []int{},
+			expectedStride: []int{},
+			expectedData:   []float64{42},
+			expectedErr:    false,
+		},
+		{
+			name:           "ScalarToScalar",
+			shape:          []int{1},
+			data:           []float64{7},
+			expectedShape:  []int{1},
+			expectedStride: []int{1},
+			expectedData:   []float64{7},
+			expectedErr:    false,
+		},
+		{
+			name:           "TooMuchData",
+			shape:          []int{2, 2},
+			data:           []float64{1, 2, 3, 4, 5},
+			expectedShape:  nil,
+			expectedStride: nil,
+			expectedData:   nil,
+			expectedErr:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tensor, err := tensor.NewTensor(tc.shape, tc.data)
+
+			if tc.expectedErr {
+				if err == nil {
+					t.Errorf("Expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+				return
+			}
+
+			if !reflect.DeepEqual(tensor.Shape(), tc.expectedShape) {
+				t.Errorf("Expected shape %v, got %v", tc.expectedShape, tensor.Shape())
+			}
+
+			if !reflect.DeepEqual(tensor.Stride(), tc.expectedStride) {
+				t.Errorf("Expected stride %v, got %v", tc.expectedStride, tensor.Stride())
+			}
+
+			if !reflect.DeepEqual(tensor.Data(), tc.expectedData) {
+				t.Errorf("Expected data %v, got %v", tc.expectedData, tensor.Data())
+			}
+		})
+	}
+}
+
+// TestAlignShapes tests the AlignShapes function
 func TestAlignShapes(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -92,6 +201,56 @@ func TestAlignShapes(t *testing.T) {
 				if !reflect.DeepEqual(result, tc.expected) {
 					t.Errorf("Expected %v, but got %v", tc.expected, result)
 				}
+			}
+		})
+	}
+}
+
+// TestComputeStrides tests the ComputeStrides function
+func TestComputeStrides(t *testing.T) {
+	testCases := []struct {
+		name     string
+		shape    []int
+		expected []int
+	}{
+		{"EmptyShape", []int{}, []int{}},
+		{"ScalarShape", []int{1}, []int{1}},
+		{"OneDimShape", []int{2}, []int{1}},
+		{"TwoDimShape", []int{2, 2}, []int{2, 1}},
+		{"ThreeDimShape", []int{2, 2, 2}, []int{4, 2, 1}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tensor.ComputeStrides(tc.shape)
+			if !reflect.DeepEqual(result, tc.expected) {
+				t.Errorf("Expected %v, but got %v", tc.expected, result)
+			}
+		})
+	}
+}
+
+// TestComputeBroadcastStrides tests the ComputeBroadcastStrides function
+func TestComputeBroadcastStrides(t *testing.T) {
+	testCases := []struct {
+		name     string
+		shape1   []int
+		shape2   []int
+		strides1 []int
+		expected []int
+	}{
+		{"EmptyShapes", []int{}, []int{}, []int{}, []int{}},
+		{"ScalarShapes", []int{1}, []int{1}, []int{1}, []int{1}},
+		{"OneDimShapes", []int{2}, []int{2}, []int{1}, []int{1}},
+		{"TwoDimShapes", []int{2, 2}, []int{2, 2}, []int{2, 1}, []int{2, 1}},
+		{"ThreeDimShapes", []int{2, 2, 2}, []int{2, 2, 2}, []int{4, 2, 1}, []int{4, 2, 1}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tensor.ComputeBroadcastStrides(tc.shape1, tc.shape2, tc.strides1)
+			if !reflect.DeepEqual(result, tc.expected) {
+				t.Errorf("Expected %v, but got %v", tc.expected, result)
 			}
 		})
 	}
