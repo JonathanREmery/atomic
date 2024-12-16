@@ -1,6 +1,21 @@
 package tensor
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+// formatSlice formats a slice of floats as a string
+func formatSlice(data []float64) string {
+	// Format the slice
+	formatted := make([]string, len(data))
+	for i, v := range data {
+		formatted[i] = fmt.Sprintf("%.2f", v)
+	}
+
+	// Join the formatted slice
+	return strings.Join(formatted, " ")
+}
 
 // ComputeStrides computes the stride of a tensor given its shape
 func ComputeStrides(shape []int) []int {
@@ -121,4 +136,22 @@ func AlignShapes(shape1 []int, shape2 []int) ([]int, error) {
 
 	// Return the aligned shape
 	return alignedShape, nil
+}
+
+// ValidReshape checks if a reshape is valid
+func ValidReshape(currentShape []int, desiredShape []int) bool {
+	// Calculate the current size of the data
+	currentSize := 1
+	for _, dim := range currentShape {
+		currentSize *= dim
+	}
+
+	// Calculate the desired size of the data
+	desiredSize := 1
+	for _, dim := range desiredShape {
+		desiredSize *= dim
+	}
+
+	// Check if the current size is equal to the desired size
+	return currentSize == desiredSize
 }

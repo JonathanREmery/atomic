@@ -3,6 +3,7 @@ package tensor
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // TensorStruct represents a tensor
@@ -17,7 +18,11 @@ type Tensor interface {
 	Shape() []int
 	Stride() []int
 	Data() []float64
+
 	String() string
+
+	View(shape []int) *ViewStruct
+
 	Add(*TensorStruct) (*TensorStruct, error)
 	Sub(*TensorStruct) (*TensorStruct, error)
 	Mul(*TensorStruct) (*TensorStruct, error)
@@ -187,7 +192,29 @@ func (t *TensorStruct) Data() []float64 {
 
 // String returns a string representation of the tensor
 func (t *TensorStruct) String() string {
-	return fmt.Sprintf("%v", t.data)
+	switch len(t.shape) {
+	case 0:
+		return fmt.Sprintf("%.2f", t.data[0])
+	case 1:
+		return fmt.Sprintf("[%s]", formatSlice(t.data))
+	case 2:
+		rows := make([]string, t.shape[0])
+		for i := 0; i < t.shape[0]; i++ {
+			row := make([]string, t.shape[1])
+			for j := 0; j < t.shape[1]; j++ {
+				row[j] = fmt.Sprintf("%.2f", t.data[i*t.stride[0]+j*t.stride[1]])
+			}
+			rows[i] = "[" + strings.Join(row, " ") + "]"
+		}
+		return "[\n " + strings.Join(rows, "\n ") + "\n]"
+	default:
+		return fmt.Sprintf("Tensor(shape=%v, data=[%s])", t.shape, formatSlice(t.data))
+	}
+}
+
+// View returns a view of the tensor
+func (t *TensorStruct) View(shape []int) (*ViewStruct, error) {
+	return NewView(t).Reshape(shape)
 }
 
 // Add adds another tensor to this tensor
