@@ -12,6 +12,24 @@ type ViewStruct struct {
 	tensor *TensorStruct
 }
 
+// validReshape checks if a reshape is valid
+func validReshape(currentShape []int, desiredShape []int) bool {
+	// Calculate the current size of the data
+	currentSize := 1
+	for _, dim := range currentShape {
+		currentSize *= dim
+	}
+
+	// Calculate the desired size of the data
+	desiredSize := 1
+	for _, dim := range desiredShape {
+		desiredSize *= dim
+	}
+
+	// Check if the current size is equal to the desired size
+	return currentSize == desiredSize
+}
+
 // View interface extends the Tensor interface
 type View interface {
 	Shape() []int
@@ -79,14 +97,14 @@ func (v *ViewStruct) View(shape []int) (*ViewStruct, error) {
 // Reshape reshapes the view to the given shape
 func (v *ViewStruct) Reshape(shape []int) (*ViewStruct, error) {
 	// Check if the reshape is valid
-	if !ValidReshape(v.shape, shape) {
+	if !validReshape(v.shape, shape) {
 		return nil, fmt.Errorf("invalid reshape")
 	}
 
-	// Create a new view with the new shape
+	// Create the view
 	return &ViewStruct{
 		shape:  shape,
-		stride: ComputeStrides(shape),
+		stride: computeStrides(shape),
 		tensor: v.tensor,
 	}, nil
 }

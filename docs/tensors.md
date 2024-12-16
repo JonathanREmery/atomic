@@ -34,35 +34,6 @@ t3, _ = t3.Sub(t1.Mul(t2))
 t4, _ := t3.Div(t2)
 ```
 
-## Views
-
-`Views` allow for efficient reshaping of `Tensors`. A `View` is a `Tensor` that shares the same data as the original `Tensor`, but with a different `shape` and `stride`.
-
-```go
-
-t1 := tensor.NewTensor([]int{3, 2}, []float64{1, 2, 3, 4, 5, 6})
-t2 := t1.View([]int{2, 3})
-
-/*
-t1 [
-  1 2
-  3 4
-  5 6
-]
-
-t2 [
-  1 2 3
-  4 5 6
-]
-*/
-
-```
-
-## Broadcasting
-
-`Broadcasting` is a way to change the shape of a `Tensor` without changing its data. It is used to make `Tensors` compatible with each other. `Broadcasting` is done automatically when a `Tensor` is created and the size of the `data` does not match the size of the `shape`. This is called "auto-broadcasting". `Broadcasting` also occurs automatically when an operation is performed between `Tensors` with different shapes.
-
-There are some rules to make sure that two `Tensors` can be `Broadcasted` together:
-1. The `Tensor` with the smaller number of dimensions is broadcasted to the shape of the `Tensor` with the larger number of dimensions.
-2. The `shapes` of the `Tensors` are aligned on the right side, then the smaller `shape` is padded with 1s on the left.
-3. So long as every dimension either matches or is `broadcasted` to 1, the `Tensors` can be `Broadcasted`.
+For more advanced tensor operations, see:
+- [Views](views.md) - Learn about efficient tensor reshaping without data copying
+- [Broadcasting](broadcasting.md) - Understand how atomic handles operations between tensors of different shapes
